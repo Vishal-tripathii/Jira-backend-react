@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-export const validateRegister = (
+export const validateAuth = (
   req: Request,
   res: Response,
   next: NextFunction

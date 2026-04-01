@@ -29,7 +29,7 @@ const userSchema = new Schema<IUser>(
         password: {
             type: String,
             required: true,
-            select: false,  // passowrds are not returned in queries
+            select: false,
         },
         role: {
             type: String,
