@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import bcrypt from "bcrypt";
 
 export enum UserRole {
     ADMIN = "ADMIN",
@@ -12,7 +13,9 @@ export interface IUser extends Document {
     role: UserRole;
     createdAt: Date;
     updatedAt: Date;
+    comparePassword(candidatePassword: string): Promise<boolean>;
 }
+
 
 const userSchema = new Schema<IUser>(
     {
@@ -38,5 +41,15 @@ const userSchema = new Schema<IUser>(
         timestamps: true,
     }
 );
+
+userSchema.pre("save", async function (this: IUser) {
+    if (!this.isModified("password")) return;
+
+    this.password = await bcrypt.hash(this.password, 10);
+});
+
+userSchema.methods.comparePassword = function (candidate: string) {
+    return bcrypt.compare(candidate, this.password);
+};
 
 export const User = mongoose.model<IUser>("User", userSchema);
