@@ -1,4 +1,5 @@
 import { User, UserRole } from "../../models/user.model";
+import { generateToken } from "../../utils/jwt.utils";
 
 export const registerUser = async (email: string, password: string) => {
     const existing = await User.findOne({ email });
@@ -36,7 +37,14 @@ export const loginUser = async (email: string, password: string) => {
         throw err;
     }
 
+ const token = generateToken({
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+    });
+
     return {
+        token,
         id: user._id,
         email: user.email,
         role: user.role,
