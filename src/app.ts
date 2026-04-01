@@ -2,7 +2,7 @@
 
 import express from "express";
 import authRoutes from "./modules/auth/auth.routes";
-import { authenticate } from "./modules/middleware/auth.middleware";
+import { allowRoles, authenticate } from "./modules/middleware/auth.middleware";
 
 const app = express();
 
@@ -16,6 +16,14 @@ app.use("/protected", authenticate, (req: any, res) => {
     user: req.user,
   });
 }); 
+
+app.get("/dashboard", authenticate, allowRoles(['MANAGER', 'ADMIN']), (req: any, res) => {
+  res.json({
+    success: true,
+    message: "Welcome to the dashboard!",
+    user: req.user,
+  });
+});
 
 
 app.get("/health", (req, res) => {
