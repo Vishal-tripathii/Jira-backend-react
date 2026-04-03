@@ -18,7 +18,7 @@ export const authenticate = (
     try {
         const authHeader = req.headers.authorization;
 
-        console.log("Received auth header:", authHeader);
+        console.log("Authorization header:", authHeader);
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return res.status(401).json({
