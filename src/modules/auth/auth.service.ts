@@ -1,13 +1,14 @@
 import { User, UserRole } from "../../models/user.model";
 import { generateToken } from "../../utils/jwt.utils";
+import { AppError } from "../../utils/errors";
+import { STATUS_CODE_409, STATUS_CODE_401 } from "../../utils/statusCodes";
+import { MESSAGES } from "../../utils/messages";
 
 export const registerUser = async (email: string, password: string) => {
     const existing = await User.findOne({ email });
 
     if (existing) {
-        const err: any = new Error("User already exists");
-        err.status = 409;
-        throw err;
+        throw new AppError(STATUS_CODE_409, MESSAGES.AUTH.USER_ALREADY_EXISTS);
     }
 
     const user = await User.create({ email, password, role: UserRole.USER });
@@ -20,24 +21,19 @@ export const registerUser = async (email: string, password: string) => {
 };
 
 export const loginUser = async (email: string, password: string) => {
-    // 1. find user WITH password
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
-        const err: any = new Error("Invalid credentials");
-        err.status = 401;
-        throw err;
+        throw new AppError(STATUS_CODE_401, MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
-        const err: any = new Error("Invalid credentials");
-        err.status = 401;
-        throw err;
+        throw new AppError(STATUS_CODE_401, MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
- const token = generateToken({
+    const token = generateToken({
         userId: user._id.toString(),
         email: user.email,
         role: user.role,

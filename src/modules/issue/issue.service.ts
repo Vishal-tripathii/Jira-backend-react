@@ -1,6 +1,9 @@
 import { User } from "../../models/user.model";
-import { Issue, IssuePriority, IssueStatus, CreateIssueInput, IIssue } from "./issue.model";
+import { Issue, IssuePriority, IssueStatus, CreateIssueInput } from "./issue.model";
 import { IssueDTO, mapIssueToDTO } from "./issue.mapper";
+import { AppError } from "../../utils/errors";
+import { STATUS_CODE_404 } from "../../utils/statusCodes";
+import { MESSAGES } from "../../utils/messages";
 
 const USER_POPULATE_FIELDS = "email role";
 
@@ -8,9 +11,7 @@ export const createIssue = async (input: CreateIssueInput): Promise<IssueDTO> =>
     if (input.assigneeId) {
         const assigneeExists = await User.exists({ _id: input.assigneeId });
         if (!assigneeExists) {
-            const err: any = new Error("Assignee not found");
-            err.status = 404;
-            throw err;
+            throw new AppError(STATUS_CODE_404, MESSAGES.ISSUE.ASSIGNEE_NOT_FOUND);
         }
     }
 
@@ -41,53 +42,35 @@ export const getIssues = async (): Promise<IssueDTO[]> => {
 };
 
 export const updateIssue = async (id: string, updateData: Partial<CreateIssueInput>): Promise<IssueDTO> => {
-    try {
-        const issue = await Issue.findById(id);
-
-        if (!issue) {
-            const err: any = new Error("Issue not found");
-            err.status = 404;
-            throw err;
-        }
-
-        if (updateData.assigneeId) {
-            const assigneeExists = await User.exists({ _id: updateData.assigneeId });
-            if (!assigneeExists) {
-                const err: any = new Error("Assignee not found");
-                err.status = 404;
-                throw err;
-            }
-        }
-
-        const updatedIssue = await Issue.findByIdAndUpdate(id, updateData, { new: true })
-            .populate({ path: "assigneeId", select: USER_POPULATE_FIELDS })
-            .populate({ path: "createdById", select: USER_POPULATE_FIELDS });
-
-        if (!updatedIssue) {
-            const err: any = new Error("Issue not found");
-            err.status = 404;
-            throw err;
-        }
-
-        return mapIssueToDTO(updatedIssue);
-    } catch (error) {
-        if (error instanceof Error) {
-            throw error;
-        } else {
-            const err: any = new Error("Internal server error");
-            err.status = 500;
-            throw err;
+    // Validate assignee if provided
+    if (updateData.assigneeId) {
+        const assigneeExists = await User.exists({ _id: updateData.assigneeId });
+        if (!assigneeExists) {
+            throw new AppError(STATUS_CODE_404, MESSAGES.ISSUE.ASSIGNEE_NOT_FOUND);
         }
     }
+
+    // Update and return in one query
+    const updatedIssue = await Issue.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true, runValidators: true }
+    )
+        .populate({ path: "assigneeId", select: USER_POPULATE_FIELDS })
+        .populate({ path: "createdById", select: USER_POPULATE_FIELDS });
+
+    if (!updatedIssue) {
+        throw new AppError(STATUS_CODE_404, MESSAGES.ISSUE.NOT_FOUND);
+    }
+
+    return mapIssueToDTO(updatedIssue);
 }
 
 export const deleteIssue = async (id: string): Promise<void> => {
     const issue = await Issue.findById(id);
 
     if (!issue) {
-        const err: any = new Error("Issue not found");
-        err.status = 404;
-        throw err;
+        throw new AppError(STATUS_CODE_404, MESSAGES.ISSUE.NOT_FOUND);
     }
 
     await Issue.findByIdAndDelete(id);
